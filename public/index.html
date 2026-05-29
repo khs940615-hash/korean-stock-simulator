@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 주식 시뮬레이터</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <!-- 헤더 -->
+  <header class="header">
+    <h1>📈 AI 주식 시뮬레이터</h1>
+    <span class="mode-badge">모의투자 모드</span>
+  </header>
+
+  <!-- 잔고 카드 -->
+  <section class="balance-section">
+    <div class="balance-card">
+      <div class="balance-item">
+        <span class="label">보유 현금</span>
+        <span class="value" id="cash">1,000,000 원</span>
+      </div>
+      <div class="balance-item">
+        <span class="label">주식 평가액</span>
+        <span class="value" id="stock-value">0 원</span>
+      </div>
+      <div class="balance-item">
+        <span class="label">총 자산</span>
+        <span class="value" id="total-asset">1,000,000 원</span>
+      </div>
+      <div class="balance-item">
+        <span class="label">총 수익률</span>
+        <span class="value" id="total-return">0.00%</span>
+      </div>
+    </div>
+    <button class="btn-charge" id="btn-charge">💰 초기 자금 설정</button>
+  </section>
+
+  <!-- 종목 검색 -->
+  <section class="search-section">
+    <h2>종목 검색</h2>
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="종목명 또는 코드 입력 (예: 삼성전자, 005930)" />
+      <button class="btn-search" id="btn-search">검색</button>
+    </div>
+    <div class="quick-picks">
+      <span class="label">빠른 선택:</span>
+      <button class="btn-quick" data-code="005930" data-name="삼성전자">삼성전자</button>
+      <button class="btn-quick" data-code="000270" data-name="기아">기아</button>
+      <button class="btn-quick" data-code="005380" data-name="현대차">현대차</button>
+      <button class="btn-quick" data-code="035420" data-name="NAVER">NAVER</button>
+      <button class="btn-quick" data-code="051910" data-name="LG화학">LG화학</button>
+      <button class="btn-quick" data-code="006400" data-name="삼성SDI">삼성SDI</button>
+    </div>
+  </section>
+
+  <!-- 종목 상세 -->
+  <section class="stock-detail" id="stock-detail" style="display:none;">
+    <div class="stock-header">
+      <div>
+        <h3 id="stock-name">-</h3>
+        <span id="stock-code" class="stock-code">-</span>
+      </div>
+      <div class="price-box">
+        <span class="current-price" id="current-price">-</span>
+        <span class="price-change" id="price-change">-</span>
+      </div>
+    </div>
+
+    <!-- 차트 -->
+    <div class="chart-container">
+      <div class="chart-tabs">
+        <button class="chart-tab active" data-period="30">1개월</button>
+        <button class="chart-tab" data-period="90">3개월</button>
+        <button class="chart-tab" data-period="180">6개월</button>
+      </div>
+      <canvas id="price-chart"></canvas>
+    </div>
+
+    <!-- AI 분석 -->
+    <div class="ai-analysis" id="ai-analysis">
+      <div class="ai-header">
+        <span class="ai-icon">🤖</span>
+        <h4>AI 분석 결과</h4>
+      </div>
+      <div class="ai-content" id="ai-content">
+        <p class="loading">분석 중...</p>
+      </div>
+      <div class="ai-actions" id="ai-actions" style="display:none;">
+        <button class="btn-buy" id="btn-buy">✅ 매수하기</button>
+        <button class="btn-skip" id="btn-skip">⏭ 건너뛰기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 자동매매 봇 -->
+  <section class="bot-section">
+    <div class="bot-header-row">
+      <div>
+        <h2>AI 자동매매 봇</h2>
+        <p class="bot-desc">수익 +3% 자동매도 · 손실 -5% 손절 · 30분마다 종목 탐색</p>
+      </div>
+      <button class="btn-bot-toggle" id="btn-bot-toggle">🤖 봇 시작</button>
+    </div>
+    <div class="bot-config-row">
+      <div class="bot-config-item">
+        <span class="label">수익 목표</span><span class="value green">+3%</span>
+      </div>
+      <div class="bot-config-item">
+        <span class="label">손절 기준</span><span class="value red">-5%</span>
+      </div>
+      <div class="bot-config-item">
+        <span class="label">1회 매수</span><span class="value">현금 15%</span>
+      </div>
+      <div class="bot-config-item">
+        <span class="label">주기</span><span class="value">30분</span>
+      </div>
+    </div>
+    <h3 class="log-title">봇 활동 로그</h3>
+    <div id="bot-log">
+      <p class="empty-msg">봇 활동 내역이 없습니다.</p>
+    </div>
+  </section>
+
+  <!-- 보유 주식 -->
+  <section class="portfolio-section">
+    <h2>내 보유 주식</h2>
+    <div id="portfolio-list">
+      <p class="empty-msg">보유 주식이 없습니다.</p>
+    </div>
+  </section>
+
+  <!-- 거래 내역 -->
+  <section class="history-section">
+    <h2>거래 내역</h2>
+    <div id="history-list">
+      <p class="empty-msg">거래 내역이 없습니다.</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- 매수 모달 -->
+<div class="modal-overlay" id="modal-buy" style="display:none;">
+  <div class="modal">
+    <h3>매수 주문</h3>
+    <div class="modal-info">
+      <span id="modal-stock-name">-</span>
+      <span id="modal-stock-price">-</span>
+    </div>
+    <div class="modal-input">
+      <label>매수 수량</label>
+      <div class="qty-control">
+        <button id="qty-minus">-</button>
+        <input type="number" id="buy-qty" value="1" min="1" />
+        <button id="qty-plus">+</button>
+      </div>
+      <p class="total-cost">총 매수금액: <strong id="buy-total">0 원</strong></p>
+      <p class="avail-cash">사용 가능 현금: <strong id="buy-avail">0 원</strong></p>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-confirm-buy" id="btn-confirm-buy">매수 확정</button>
+      <button class="btn-cancel" id="btn-cancel-buy">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 매도 모달 -->
+<div class="modal-overlay" id="modal-sell" style="display:none;">
+  <div class="modal">
+    <h3>매도 주문</h3>
+    <div class="modal-info">
+      <span id="modal-sell-name">-</span>
+      <span id="modal-sell-price">-</span>
+    </div>
+    <div class="modal-input">
+      <label>매도 수량</label>
+      <div class="qty-control">
+        <button id="sell-qty-minus">-</button>
+        <input type="number" id="sell-qty" value="1" min="1" />
+        <button id="sell-qty-plus">+</button>
+      </div>
+      <p class="total-cost">총 매도금액: <strong id="sell-total">0 원</strong></p>
+      <p class="avail-cash">보유 수량: <strong id="sell-avail">0 주</strong></p>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-confirm-sell" id="btn-confirm-sell">매도 확정</button>
+      <button class="btn-cancel" id="btn-cancel-sell">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 자금 설정 모달 -->
+<div class="modal-overlay" id="modal-charge" style="display:none;">
+  <div class="modal">
+    <h3>초기 자금 설정</h3>
+    <p class="modal-desc">시뮬레이션에 사용할 가상 자금을 설정합니다.<br><strong>※ 기존 거래 내역이 초기화됩니다.</strong></p>
+    <div class="modal-input">
+      <label>시작 자금 (원)</label>
+      <input type="number" id="charge-amount" value="1000000" step="100000" min="100000" />
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-confirm-buy" id="btn-confirm-charge">설정하기</button>
+      <button class="btn-cancel" id="btn-cancel-charge">취소</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
