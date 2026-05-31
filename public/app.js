@@ -7,16 +7,26 @@ const STOCK_MAP = {
   '현대모비스': '012330', 'POSCO홀딩스': '005490', 'KB금융': '105560',
   '신한지주': '055550', '삼성바이오로직스': '207940', '셀트리온': '068270',
   '카카오뱅크': '323410', '크래프톤': '259960', '하이브': '352820',
+  'LG에너지솔루션': '373220', '하나금융지주': '086790', '우리금융지주': '316140',
+  '메리츠금융지주': '138040', '삼성화재': '000810', 'SK텔레콤': '017670',
+  'KT': '030200', 'KT&G': '033780', '에코프로비엠': '247540',
+  '에코프로': '086520', 'HLB': '028300', '펄어비스': '263750',
+  '카카오게임즈': '293490', '위메이드': '112040', '클래시스': '214150',
+  '리노공업': '058470', '파마리서치': '214450', '알테오젠': '196170',
 };
 
 // ── 서버 API 호출
 const api = {
-  getState: () => fetch('/api/state').then(r => r.json()),
-  setState: (data) => fetch('/api/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
-  getStock: (code, range) => fetch(`/api/stock/${code}?range=${range || '1mo'}`).then(r => r.json()),
-  startBot: () => fetch('/api/bot/start', { method: 'POST' }).then(r => r.json()),
-  stopBot: () => fetch('/api/bot/stop', { method: 'POST' }).then(r => r.json()),
-  getBotLog: () => fetch('/api/bot/log').then(r => r.json()),
+  getState:     () => fetch('/api/state').then(r => r.json()),
+  setState:     (data) => fetch('/api/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  getStock:     (code, range) => fetch(`/api/stock/${code}?range=${range || '1mo'}`).then(r => r.json()),
+  startBot:     () => fetch('/api/bot/start', { method: 'POST' }).then(r => r.json()),
+  stopBot:      () => fetch('/api/bot/stop', { method: 'POST' }).then(r => r.json()),
+  getBotLog:    () => fetch('/api/bot/log').then(r => r.json()),
+  getStats:     () => fetch('/api/stats').then(r => r.json()),
+  saveConfig:   (cfg) => fetch('/api/bot/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) }).then(r => r.json()),
+  getWatchlist: () => fetch('/api/watchlist').then(r => r.json()),
+  saveWatchlist:(list) => fetch('/api/watchlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ watchlist: list }) }),
 };
 
 // ── 앱 상태 (UI용)
@@ -27,6 +37,8 @@ let state = {
   currentStock: null, currentPrice: 0,
   chartInstance: null,
 };
+
+let watchlist = [];
 
 function fmt(n) { return Math.round(n).toLocaleString('ko-KR') + ' 원'; }
 
@@ -52,6 +64,9 @@ async function syncState() {
   renderHistory();
   renderBotLog();
   updateBotButton(s.botRunning);
+
+  if (s.botConfig) syncBotConfigUI(s.botConfig);
+  loadStats();
 }
 
 // ── 잔고 UI
@@ -66,6 +81,47 @@ function updateBalanceUI() {
   const el = document.getElementById('total-return');
   el.textContent = (ret >= 0 ? '+' : '') + ret.toFixed(2) + '%';
   el.className = 'value ' + (ret >= 0 ? 'positive' : 'negative');
+}
+
+// ── 성과 분석
+async function loadStats() {
+  try {
+    const s = await api.getStats();
+    document.getElementById('stat-trades').textContent = s.totalTrades;
+    document.getElementById('stat-winrate').textContent = s.winRate !== null ? s.winRate.toFixed(1) + '%' : '-';
+
+    const profitEl = document.getElementById('stat-profit');
+    const p = Math.round(s.totalProfit);
+    profitEl.textContent = (p > 0 ? '+' : '') + p.toLocaleString() + '원';
+    profitEl.className = 'value ' + (p >= 0 ? 'positive' : 'negative');
+
+    document.getElementById('stat-mdd').textContent = s.maxDrawdown.toFixed(1) + '%';
+
+    if (s.valueHistory && s.valueHistory.length > 1) renderPerfChart(s.valueHistory);
+  } catch (e) { /* ignore */ }
+}
+
+function renderPerfChart(valueHistory) {
+  const canvas = document.getElementById('perf-chart');
+  const emptyMsg = document.getElementById('perf-empty');
+  canvas.style.display = 'block';
+  if (emptyMsg) emptyMsg.style.display = 'none';
+  if (window.perfChartInstance) window.perfChartInstance.destroy();
+  window.perfChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: valueHistory.map(v => v.date),
+      datasets: [{ data: valueHistory.map(v => v.value), borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.08)', borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y.toLocaleString() + '원' } } },
+      scales: {
+        x: { ticks: { color: '#6b7280', maxTicksLimit: 5 }, grid: { color: '#1e2130' } },
+        y: { ticks: { color: '#6b7280', callback: v => v.toLocaleString() }, grid: { color: '#1e2130' } },
+      },
+    },
+  });
 }
 
 // ── 보유 주식
@@ -123,6 +179,57 @@ function updateBotButton(running) {
   state.botRunning = running;
   btn.textContent = running ? '⏹ 봇 정지' : '🤖 봇 시작';
   btn.classList.toggle('running', running);
+}
+
+// ── 봇 설정 UI 동기화
+function syncBotConfigUI(cfg) {
+  document.getElementById('cfg-profit').value = (cfg.profitTarget * 100).toFixed(1);
+  document.getElementById('cfg-stoploss').value = (cfg.stopLoss * 100).toFixed(1);
+  document.getElementById('cfg-buyratio').value = (cfg.buyPerStock * 100).toFixed(0);
+  document.getElementById('cfg-interval').value = cfg.intervalMin;
+  updateBotDesc(cfg.profitTarget, cfg.stopLoss, cfg.intervalMin);
+}
+
+function updateBotDesc(profitTarget, stopLoss, intervalMin) {
+  document.getElementById('bot-desc').textContent =
+    `수익 +${(profitTarget * 100).toFixed(1)}% 자동매도 · 손실 -${(stopLoss * 100).toFixed(1)}% 손절 · ${intervalMin}분마다 종목 탐색`;
+}
+
+// ── 관심 종목
+async function loadWatchlist() {
+  try {
+    const data = await api.getWatchlist();
+    watchlist = data.watchlist || [];
+    renderWatchlistTab();
+  } catch (e) {}
+}
+
+function updateStarButton() {
+  const btn = document.getElementById('btn-star');
+  if (!btn || !state.currentStock) return;
+  const isWatched = watchlist.some(w => w.code === state.currentStock.shortCode);
+  btn.textContent = isWatched ? '★' : '☆';
+  btn.classList.toggle('active', isWatched);
+}
+
+function renderWatchlistTab() {
+  const container = document.getElementById('watchlist-items');
+  const emptyMsg = document.getElementById('watchlist-empty');
+  if (!watchlist.length) {
+    if (emptyMsg) emptyMsg.style.display = 'block';
+    container.innerHTML = '';
+    return;
+  }
+  if (emptyMsg) emptyMsg.style.display = 'none';
+  container.innerHTML = watchlist.map(w =>
+    `<button class="btn-quick" data-code="${w.code}" data-name="${w.name}">${w.name}</button>`
+  ).join('');
+  container.querySelectorAll('.btn-quick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('search-input').value = btn.dataset.name;
+      loadStock(btn.dataset.name);
+    });
+  });
 }
 
 // ── 차트
@@ -210,6 +317,7 @@ async function loadStock(input) {
     changeEl.className = 'price-change ' + (change >= 0 ? 'up' : 'down');
     renderChart(data.prices);
     showAnalysis(analyzeStock(data.prices, data.currentPrice));
+    updateStarButton();
   } catch (e) {
     document.getElementById('ai-content').innerHTML = `<p class="loading">조회 실패: ${e.message}</p>`;
   }
@@ -266,7 +374,8 @@ async function executeBuy() {
   }
   state.history.push({ type: 'buy', name: state.currentStock.name, qty, price: state.currentPrice, date: new Date().toLocaleDateString('ko-KR') });
   await api.setState({ cash: state.cash, portfolio: state.portfolio, history: state.history });
-  updateBalanceUI(); renderPortfolio(); renderHistory();
+  await fetch('/api/snapshot', { method: 'POST' });
+  updateBalanceUI(); renderPortfolio(); renderHistory(); loadStats();
   document.getElementById('modal-buy').style.display = 'none';
 }
 
@@ -277,21 +386,39 @@ async function executeSell() {
   if (!pos) return;
   const qty = parseInt(document.getElementById('sell-qty').value);
   if (qty <= 0 || qty > pos.qty) { alert('수량을 확인하세요.'); return; }
+  const profit = Math.round((state.currentPrice - pos.avgPrice) * qty);
   state.cash += qty * state.currentPrice;
   pos.qty -= qty;
   if (pos.qty === 0) delete state.portfolio[code];
-  state.history.push({ type: 'sell', name: pos.name, qty, price: state.currentPrice, date: new Date().toLocaleDateString('ko-KR') });
+  state.history.push({ type: 'sell', name: pos.name, qty, price: state.currentPrice, profit, date: new Date().toLocaleDateString('ko-KR') });
   await api.setState({ cash: state.cash, portfolio: state.portfolio, history: state.history });
-  updateBalanceUI(); renderPortfolio(); renderHistory();
+  await fetch('/api/snapshot', { method: 'POST' });
+  updateBalanceUI(); renderPortfolio(); renderHistory(); loadStats();
   document.getElementById('modal-sell').style.display = 'none';
 }
 
 // ── 이벤트 바인딩
+
+// 검색
 document.getElementById('btn-search').addEventListener('click', () => loadStock(document.getElementById('search-input').value));
 document.getElementById('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') loadStock(e.target.value); });
-document.querySelectorAll('.btn-quick').forEach(btn => {
+
+// 종목 탭 전환
+document.querySelectorAll('.stock-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.stock-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.quick-group').forEach(g => g.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// 빠른 종목 버튼 (정적 탭)
+document.querySelectorAll('#tab-kospi .btn-quick, #tab-finance .btn-quick, #tab-it .btn-quick, #tab-kosdaq .btn-quick').forEach(btn => {
   btn.addEventListener('click', () => { document.getElementById('search-input').value = btn.dataset.name; loadStock(btn.dataset.name); });
 });
+
+// 차트 기간 탭
 document.querySelectorAll('.chart-tab').forEach(tab => {
   tab.addEventListener('click', async () => {
     document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
@@ -304,21 +431,37 @@ document.querySelectorAll('.chart-tab').forEach(tab => {
   });
 });
 
+// 관심 종목 별 버튼
+document.getElementById('btn-star').addEventListener('click', async () => {
+  if (!state.currentStock) return;
+  const { shortCode: code, name } = state.currentStock;
+  const idx = watchlist.findIndex(w => w.code === code);
+  if (idx >= 0) watchlist.splice(idx, 1);
+  else watchlist.push({ code, name });
+  await api.saveWatchlist(watchlist);
+  updateStarButton();
+  renderWatchlistTab();
+});
+
+// AI 분석 버튼
 document.getElementById('btn-buy').addEventListener('click', openBuyModal);
 document.getElementById('btn-skip').addEventListener('click', () => { document.getElementById('ai-actions').style.display = 'none'; });
 
+// 매수 모달
 document.getElementById('qty-minus').addEventListener('click', () => { document.getElementById('buy-qty').value = Math.max(1, parseInt(document.getElementById('buy-qty').value) - 1); updateBuyTotal(); });
 document.getElementById('qty-plus').addEventListener('click', () => { document.getElementById('buy-qty').value = parseInt(document.getElementById('buy-qty').value) + 1; updateBuyTotal(); });
 document.getElementById('buy-qty').addEventListener('input', updateBuyTotal);
 document.getElementById('btn-confirm-buy').addEventListener('click', executeBuy);
 document.getElementById('btn-cancel-buy').addEventListener('click', () => { document.getElementById('modal-buy').style.display = 'none'; });
 
+// 매도 모달
 document.getElementById('sell-qty-minus').addEventListener('click', () => { document.getElementById('sell-qty').value = Math.max(1, parseInt(document.getElementById('sell-qty').value) - 1); updateSellTotal(); });
 document.getElementById('sell-qty-plus').addEventListener('click', () => { document.getElementById('sell-qty').value = parseInt(document.getElementById('sell-qty').value) + 1; updateSellTotal(); });
 document.getElementById('sell-qty').addEventListener('input', updateSellTotal);
 document.getElementById('btn-confirm-sell').addEventListener('click', executeSell);
 document.getElementById('btn-cancel-sell').addEventListener('click', () => { document.getElementById('modal-sell').style.display = 'none'; });
 
+// 자금 설정 모달
 document.getElementById('btn-charge').addEventListener('click', () => { document.getElementById('modal-charge').style.display = 'flex'; });
 document.getElementById('btn-confirm-charge').addEventListener('click', async () => {
   const amount = parseInt(document.getElementById('charge-amount').value);
@@ -331,6 +474,7 @@ document.getElementById('btn-confirm-charge').addEventListener('click', async ()
 });
 document.getElementById('btn-cancel-charge').addEventListener('click', () => { document.getElementById('modal-charge').style.display = 'none'; });
 
+// 봇 토글
 document.getElementById('btn-bot-toggle').addEventListener('click', async () => {
   if (state.botRunning) {
     await api.stopBot(); updateBotButton(false);
@@ -340,10 +484,32 @@ document.getElementById('btn-bot-toggle').addEventListener('click', async () => 
   setTimeout(syncState, 2000);
 });
 
+// 봇 설정 저장
+document.getElementById('btn-save-config').addEventListener('click', async () => {
+  const profitTarget = parseFloat(document.getElementById('cfg-profit').value) / 100;
+  const stopLoss = parseFloat(document.getElementById('cfg-stoploss').value) / 100;
+  const buyPerStock = parseFloat(document.getElementById('cfg-buyratio').value) / 100;
+  const intervalMin = parseInt(document.getElementById('cfg-interval').value);
+
+  await api.saveConfig({ profitTarget, stopLoss, buyPerStock, intervalMin });
+  updateBotDesc(profitTarget, stopLoss, intervalMin);
+
+  if (state.botRunning) {
+    await api.stopBot();
+    setTimeout(async () => { await api.startBot(); updateBotButton(true); }, 500);
+  }
+
+  const btn = document.getElementById('btn-save-config');
+  btn.textContent = '✓ 저장됨';
+  setTimeout(() => { btn.textContent = '설정 저장'; }, 1500);
+});
+
+// 모달 오버레이 클릭 시 닫기
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
 });
 
-// 초기화 + 30초마다 자동 동기화
+// 초기화
 syncState();
+loadWatchlist();
 setInterval(syncState, 30000);

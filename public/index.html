@@ -40,6 +40,33 @@
     <button class="btn-charge" id="btn-charge">💰 초기 자금 설정</button>
   </section>
 
+  <!-- 성과 분석 -->
+  <section class="stats-section">
+    <h2>성과 분석</h2>
+    <div class="stats-grid">
+      <div class="stats-card">
+        <span class="label">총 거래</span>
+        <span class="value" id="stat-trades">-</span>
+      </div>
+      <div class="stats-card">
+        <span class="label">승률</span>
+        <span class="value" id="stat-winrate">-</span>
+      </div>
+      <div class="stats-card">
+        <span class="label">실현 손익</span>
+        <span class="value" id="stat-profit">-</span>
+      </div>
+      <div class="stats-card">
+        <span class="label">최대 낙폭 MDD</span>
+        <span class="value" id="stat-mdd">-</span>
+      </div>
+    </div>
+    <div class="perf-chart-wrap">
+      <canvas id="perf-chart" style="display:none;"></canvas>
+      <p class="empty-msg" id="perf-empty">거래 후 수익 추이가 표시됩니다.</p>
+    </div>
+  </section>
+
   <!-- 종목 검색 -->
   <section class="search-section">
     <h2>종목 검색</h2>
@@ -47,23 +74,79 @@
       <input type="text" id="search-input" placeholder="종목명 또는 코드 입력 (예: 삼성전자, 005930)" />
       <button class="btn-search" id="btn-search">검색</button>
     </div>
-    <div class="quick-picks">
-      <span class="label">빠른 선택:</span>
+
+    <!-- 종목 탭 -->
+    <div class="stock-tabs">
+      <button class="stock-tab active" data-tab="kospi">KOSPI 대형</button>
+      <button class="stock-tab" data-tab="finance">금융</button>
+      <button class="stock-tab" data-tab="it">IT·플랫폼</button>
+      <button class="stock-tab" data-tab="kosdaq">KOSDAQ</button>
+      <button class="stock-tab" data-tab="watchlist">★ 관심</button>
+    </div>
+
+    <div class="quick-group active" id="tab-kospi">
       <button class="btn-quick" data-code="005930" data-name="삼성전자">삼성전자</button>
-      <button class="btn-quick" data-code="000270" data-name="기아">기아</button>
+      <button class="btn-quick" data-code="000660" data-name="SK하이닉스">SK하이닉스</button>
+      <button class="btn-quick" data-code="373220" data-name="LG에너지솔루션">LG에너지솔루션</button>
       <button class="btn-quick" data-code="005380" data-name="현대차">현대차</button>
-      <button class="btn-quick" data-code="035420" data-name="NAVER">NAVER</button>
+      <button class="btn-quick" data-code="000270" data-name="기아">기아</button>
+      <button class="btn-quick" data-code="005490" data-name="POSCO홀딩스">POSCO홀딩스</button>
       <button class="btn-quick" data-code="051910" data-name="LG화학">LG화학</button>
       <button class="btn-quick" data-code="006400" data-name="삼성SDI">삼성SDI</button>
+      <button class="btn-quick" data-code="066570" data-name="LG전자">LG전자</button>
+      <button class="btn-quick" data-code="207940" data-name="삼성바이오로직스">삼성바이오로직스</button>
+      <button class="btn-quick" data-code="068270" data-name="셀트리온">셀트리온</button>
+      <button class="btn-quick" data-code="100790" data-name="씨에스윈드">씨에스윈드</button>
+    </div>
+
+    <div class="quick-group" id="tab-finance">
+      <button class="btn-quick" data-code="105560" data-name="KB금융">KB금융</button>
+      <button class="btn-quick" data-code="055550" data-name="신한지주">신한지주</button>
+      <button class="btn-quick" data-code="086790" data-name="하나금융지주">하나금융지주</button>
+      <button class="btn-quick" data-code="316140" data-name="우리금융지주">우리금융지주</button>
+      <button class="btn-quick" data-code="138040" data-name="메리츠금융지주">메리츠금융지주</button>
+      <button class="btn-quick" data-code="000810" data-name="삼성화재">삼성화재</button>
+    </div>
+
+    <div class="quick-group" id="tab-it">
+      <button class="btn-quick" data-code="035420" data-name="NAVER">NAVER</button>
+      <button class="btn-quick" data-code="035720" data-name="카카오">카카오</button>
+      <button class="btn-quick" data-code="323410" data-name="카카오뱅크">카카오뱅크</button>
+      <button class="btn-quick" data-code="259960" data-name="크래프톤">크래프톤</button>
+      <button class="btn-quick" data-code="352820" data-name="하이브">하이브</button>
+      <button class="btn-quick" data-code="017670" data-name="SK텔레콤">SK텔레콤</button>
+      <button class="btn-quick" data-code="030200" data-name="KT">KT</button>
+      <button class="btn-quick" data-code="033780" data-name="KT&G">KT&amp;G</button>
+    </div>
+
+    <div class="quick-group" id="tab-kosdaq">
+      <button class="btn-quick" data-code="247540" data-name="에코프로비엠">에코프로비엠</button>
+      <button class="btn-quick" data-code="086520" data-name="에코프로">에코프로</button>
+      <button class="btn-quick" data-code="028300" data-name="HLB">HLB</button>
+      <button class="btn-quick" data-code="263750" data-name="펄어비스">펄어비스</button>
+      <button class="btn-quick" data-code="293490" data-name="카카오게임즈">카카오게임즈</button>
+      <button class="btn-quick" data-code="112040" data-name="위메이드">위메이드</button>
+      <button class="btn-quick" data-code="214150" data-name="클래시스">클래시스</button>
+      <button class="btn-quick" data-code="058470" data-name="리노공업">리노공업</button>
+      <button class="btn-quick" data-code="214450" data-name="파마리서치">파마리서치</button>
+      <button class="btn-quick" data-code="196170" data-name="알테오젠">알테오젠</button>
+    </div>
+
+    <div class="quick-group" id="tab-watchlist">
+      <p class="empty-msg" id="watchlist-empty">관심 종목이 없습니다.<br>종목 검색 후 ★를 눌러 추가하세요.</p>
+      <div id="watchlist-items"></div>
     </div>
   </section>
 
   <!-- 종목 상세 -->
   <section class="stock-detail" id="stock-detail" style="display:none;">
     <div class="stock-header">
-      <div>
-        <h3 id="stock-name">-</h3>
-        <span id="stock-code" class="stock-code">-</span>
+      <div class="stock-name-row">
+        <div>
+          <h3 id="stock-name">-</h3>
+          <span id="stock-code" class="stock-code">-</span>
+        </div>
+        <button class="btn-star" id="btn-star" title="관심 종목">☆</button>
       </div>
       <div class="price-box">
         <span class="current-price" id="current-price">-</span>
@@ -102,24 +185,48 @@
     <div class="bot-header-row">
       <div>
         <h2>AI 자동매매 봇</h2>
-        <p class="bot-desc">수익 +3% 자동매도 · 손실 -5% 손절 · 30분마다 종목 탐색</p>
+        <p class="bot-desc" id="bot-desc">수익 +3% 자동매도 · 손실 -5% 손절 · 30분마다 종목 탐색</p>
       </div>
       <button class="btn-bot-toggle" id="btn-bot-toggle">🤖 봇 시작</button>
     </div>
-    <div class="bot-config-row">
-      <div class="bot-config-item">
-        <span class="label">수익 목표</span><span class="value green">+3%</span>
+
+    <!-- 봇 설정 에디터 -->
+    <div class="bot-config-editor">
+      <div class="config-grid">
+        <div class="config-field">
+          <label>익절 목표</label>
+          <div class="config-input-wrap">
+            <input type="number" id="cfg-profit" min="0.5" max="20" step="0.5" value="3" />
+            <span>%</span>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>손절 기준</label>
+          <div class="config-input-wrap">
+            <input type="number" id="cfg-stoploss" min="0.5" max="20" step="0.5" value="5" />
+            <span>%</span>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>1회 매수 비율</label>
+          <div class="config-input-wrap">
+            <input type="number" id="cfg-buyratio" min="5" max="50" step="5" value="15" />
+            <span>%</span>
+          </div>
+        </div>
+        <div class="config-field">
+          <label>실행 주기</label>
+          <select id="cfg-interval">
+            <option value="10">10분</option>
+            <option value="30" selected>30분</option>
+            <option value="60">1시간</option>
+            <option value="120">2시간</option>
+          </select>
+        </div>
       </div>
-      <div class="bot-config-item">
-        <span class="label">손절 기준</span><span class="value red">-5%</span>
-      </div>
-      <div class="bot-config-item">
-        <span class="label">1회 매수</span><span class="value">현금 15%</span>
-      </div>
-      <div class="bot-config-item">
-        <span class="label">주기</span><span class="value">30분</span>
-      </div>
+      <button class="btn-save-config" id="btn-save-config">설정 저장</button>
     </div>
+
     <h3 class="log-title">봇 활동 로그</h3>
     <div id="bot-log">
       <p class="empty-msg">봇 활동 내역이 없습니다.</p>
