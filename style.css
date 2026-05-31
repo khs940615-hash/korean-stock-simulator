@@ -42,6 +42,34 @@ body {
   border: 1px solid #4ade80;
 }
 
+.market-badge {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  margin-left: auto;
+}
+.market-badge.open {
+  background: #1a2a3a;
+  color: #60a5fa;
+  border-color: #60a5fa;
+  animation: pulse-badge 2s infinite;
+}
+.market-badge.pre {
+  background: #2a2a1a;
+  color: #facc15;
+  border-color: #facc15;
+}
+.market-badge.closed {
+  background: #2a1a1a;
+  color: #f87171;
+  border-color: #f87171;
+}
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 /* 섹션 공통 */
 section {
   margin-bottom: 28px;
@@ -94,6 +122,109 @@ section h2 {
   transition: all 0.2s;
 }
 .btn-charge:hover { background: #2a2d3e; color: #fff; }
+
+/* 성과 분석 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.stats-card {
+  background: #1a1d2e;
+  border: 1px solid #2a2d3e;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.stats-card .label {
+  display: block;
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.stats-card .value { font-size: 1.1rem; font-weight: 700; color: #fff; }
+.stats-card .value.positive { color: #ef4444; }
+.stats-card .value.negative { color: #3b82f6; }
+.perf-chart-wrap {
+  background: #1a1d2e;
+  border: 1px solid #2a2d3e;
+  border-radius: 10px;
+  padding: 16px;
+  height: 160px;
+  position: relative;
+}
+#perf-chart { width: 100% !important; height: 128px !important; }
+
+/* 종목 탭 */
+.stock-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.stock-tab {
+  background: #1a1d2e;
+  border: 1px solid #2a2d3e;
+  color: #6b7280;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+.stock-tab.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.stock-tab:hover:not(.active) { background: #2a2d3e; color: #d1d5db; }
+.quick-group { display: none; flex-wrap: wrap; gap: 8px; }
+.quick-group.active { display: flex; }
+
+/* 관심 종목 별 버튼 */
+.stock-name-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.btn-star {
+  background: none;
+  border: 1px solid #2a2d3e;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 1.2rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.btn-star:hover, .btn-star.active { color: #f59e0b; border-color: #f59e0b; background: rgba(245,158,11,0.1); }
+
+/* 봇 설정 에디터 */
+.bot-config-editor { background: #0f1117; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+.config-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+.config-field label { display: block; font-size: 0.75rem; color: #6b7280; margin-bottom: 6px; }
+.config-input-wrap { display: flex; align-items: center; gap: 6px; }
+.config-input-wrap input,
+.config-field select {
+  flex: 1;
+  background: #1a1d2e;
+  border: 1px solid #2a2d3e;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #fff;
+  font-size: 0.9rem;
+  width: 100%;
+}
+.config-input-wrap input:focus, .config-field select:focus { outline: none; border-color: #3b82f6; }
+.config-input-wrap span { font-size: 0.85rem; color: #6b7280; }
+.btn-save-config {
+  width: 100%;
+  background: #1e3a5f;
+  color: #93c5fd;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  padding: 9px 20px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-save-config:hover { background: #1e4a7f; }
 
 /* 검색 */
 .search-bar {
@@ -597,7 +728,10 @@ section h2 {
 
   .chart-tab { font-size: 0.75rem; padding: 5px 10px; }
 
-  .bot-config-row { grid-template-columns: repeat(2, 1fr); }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .config-grid { grid-template-columns: 1fr; }
+  .stock-tabs { gap: 4px; }
+  .stock-tab { font-size: 0.75rem; padding: 5px 10px; }
 
   .portfolio-item { flex-direction: column; gap: 10px; align-items: flex-start; }
   .portfolio-item > div:last-child { width: 100%; display: flex; justify-content: space-between; align-items: center; }

@@ -509,7 +509,62 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
 });
 
+// ── 한국 장 시간 판단 (KST 09:00~15:30, 월~금)
+function isKoreanMarketOpen() {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const day = kst.getUTCDay();
+  if (day === 0 || day === 6) return false;
+  const totalMin = kst.getUTCHours() * 60 + kst.getUTCMinutes();
+  return totalMin >= 9 * 60 && totalMin < 15 * 60 + 30;
+}
+
+function updateMarketStatus() {
+  const el = document.getElementById('market-status');
+  if (!el) return;
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const day = kst.getUTCDay();
+  const totalMin = kst.getUTCHours() * 60 + kst.getUTCMinutes();
+  if (isKoreanMarketOpen()) {
+    el.textContent = '🔵 장 중 (15분 지연)';
+    el.className = 'market-badge open';
+  } else if (day >= 1 && day <= 5 && totalMin >= 8 * 60 && totalMin < 9 * 60) {
+    el.textContent = '🟡 장 전';
+    el.className = 'market-badge pre';
+  } else {
+    el.textContent = '🔴 장 마감';
+    el.className = 'market-badge closed';
+  }
+}
+
+let priceRefreshTimer = null;
+
+async function refreshCurrentPrice() {
+  if (!state.currentStock) return;
+  try {
+    const data = await api.getStock(state.currentStock.shortCode);
+    if (data.error) return;
+    state.currentPrice = data.currentPrice;
+    state.currentStock.currentPrice = data.currentPrice;
+    const change = data.currentPrice - data.prevClose;
+    const changePct = (change / data.prevClose) * 100;
+    document.getElementById('current-price').textContent = data.currentPrice.toLocaleString() + ' 원';
+    const changeEl = document.getElementById('price-change');
+    changeEl.textContent = `${change >= 0 ? '+' : ''}${Math.round(change).toLocaleString()}원 (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%)`;
+    changeEl.className = 'price-change ' + (change >= 0 ? 'up' : 'down');
+  } catch (e) { /* silent */ }
+}
+
+function startPriceRefresh() {
+  if (priceRefreshTimer) clearInterval(priceRefreshTimer);
+  updateMarketStatus();
+  priceRefreshTimer = setInterval(() => {
+    updateMarketStatus();
+    if (isKoreanMarketOpen()) refreshCurrentPrice();
+  }, 60 * 1000);
+}
+
 // 초기화
 syncState();
 loadWatchlist();
+startPriceRefresh();
 setInterval(syncState, 30000);
